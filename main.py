@@ -20,7 +20,7 @@ class PairTrading:
         standardY = (returnY + 1).cumprod()
         SSD = np.sum((standardY - standardX) ** 2)
         return (SSD)
-    def findPair(self, sh, fromStart, fromEnd):
+    def findPair(self, sh, formStart, formEnd):
 
         sh_form = sh[formStart:formEnd]
         lst = list(sh_form.columns)
@@ -34,8 +34,8 @@ class PairTrading:
 
         # least ssd, rank top 10
         d_sort = sorted(d.items(), key=lambda x: x[1])
-        # print(d_sort)
         return d_sort[:10]
+
 
     def SSD_Spread(self, priceX, priceY):
         priceX = np.log(priceX)
@@ -217,23 +217,26 @@ class PairTrading:
 
 if __name__ == '__main__':
     pt = PairTrading()
-    sh = pd.read_csv('sh50.csv', index_col='Trddt')
+    sh = pd.read_csv('data.csv', index_col='0')
     sh.index = pd.to_datetime(sh.index)
     # print(sh.head())
     # print(sh.tail)
 
 #strategy fomulation
-    formStart = '2014-01-01'
-    formEnd = '2014-12-31'
-    pair=pt.findPair(sh, formStart, formEnd)[0]
-    print(pair)
-    P_priceX = sh['600015']
-    P_priceY = sh['601166']
+    formStart = '2017-01-01'
+    formEnd = '2020-12-31'
+
+    pair=pt.findPair(sh, formStart, formEnd)[2]
+
+    pa=pair[0].split("-")
+    print(pa)
+    P_priceX = sh[pa[0]]
+    P_priceY = sh[pa[1]]
 
     #check visually
-    pt.showHistory(P_priceX,P_priceY)
-    pt.showReturn(P_priceX,P_priceY)
-    pt.showCumReturns(P_priceX,P_priceY)
+    # pt.showHistory(P_priceX,P_priceY)
+    # pt.showReturn(P_priceX,P_priceY)
+    # pt.showCumReturns(P_priceX,P_priceY)
 
     price_priceX_form = P_priceX[formStart:formEnd]
     price_priceY_form = P_priceY[formStart:formEnd]
@@ -244,20 +247,21 @@ if __name__ == '__main__':
     sd = np.std(SSD_spread_form)
 
 #trading simulation and backtesting
-    tradStart = '2015-01-01'
-    tradEnd = '2015-12-31'
+    tradStart = '2021-01-01'
+    tradEnd = '2023-12-31'
 
     price_priceX_trade = P_priceX[tradStart:tradEnd]
     price_priceY_trade = P_priceY[tradStart:tradEnd]
 
     SSD_spread_trade = pt.SSD_Spread(price_priceX_trade, price_priceY_trade)
-    SSD_spread_trade.head()
 
-    pt.plotBands(mu, sd)
+
+    # pt.plotBands(mu, sd)
 
     level = (float('-inf'), mu - 3.0 * sd, mu - 1.5 * sd, mu - 0.2 * sd, mu + 0.2 * sd, mu + 1.5 * sd, mu + 3.0 * sd,
              float('inf'))
-
+    # print(level)
+    # print(SSD_spread_trade)
     prcLevel = pd.cut(SSD_spread_trade, level, labels=False) - 3
     signal = pt.TradeSig(prcLevel)
 
@@ -281,9 +285,10 @@ if __name__ == '__main__':
     position = pd.Series(position, index=SSD_spread_trade.index)
 
     account = pt.TradeSim(price_priceX_trade, price_priceY_trade, position)
+    # account["Asset"].iloc[:, [1]].plot(style=['--',], color=['red'],
+    #                                    figsize=(10, 6))
 
-
-    account.iloc[:, [1, 2, 3, 4]].plot(style=['--', '--', '-', ':'], color=['red', 'blue', 'yellow', 'green'],
+    account["Asset"].plot(style='--', color='blue',
                                        figsize=(10, 6))
 
     plt.title('Account', loc='center', fontsize=16)

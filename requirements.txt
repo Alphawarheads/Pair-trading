@@ -6,4 +6,4 @@ urllib
 json
 statsmodels
 baostock
-parser
+dateutil
