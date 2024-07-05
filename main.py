@@ -155,30 +155,36 @@ class PairTrading:
                 signal[i] = -3
         return (signal)
 
+    import pandas as pd
+
     def TradeSim(self,priceX, priceY, position):
         n = len(position)
         size = 1000
-        beta = 1  # Determine trading positions: Equal weighting; Delta hedging; Capital ratio
-        shareY = size * position
+        beta = 1  # 确定交易头寸：等权重；delta对冲；资金比例
+        shareY = size * position  # shareY为兴业银行标的数量
         shareX = [(-beta) * shareY[0] * priceY[0] / priceX[0]]
-        cash = [2000]  # margin (for example, 20%, 5 times leverage) and the market value of the paired trade (size * price of the underlying asset)"
+        cash = [2000]  # 注意保证金（以20%为例，即5倍杠杆）与配对交易的市值（size*标的价格）
 
         for i in range(1, n):
+            # 初始化当前时间步的股票数量和现金余额为前一个时间步的值
             shareX.append(shareX[i - 1])
             cash.append(cash[i - 1])
+
+            # 根据头寸变化调整持有的股票数量和现金余额
             if position[i - 1] == 0 and position[i] == 1:
                 shareX[i] = (-beta) * shareY[i] * priceY[i] / priceX[i]
                 cash[i] = cash[i - 1] - (shareY[i] * priceY[i] + shareX[i] * priceX[i])
             elif position[i - 1] == 0 and position[i] == -1:
                 shareX[i] = (-beta) * shareY[i] * priceY[i] / priceX[i]
                 cash[i] = cash[i - 1] - (shareY[i] * priceY[i] + shareX[i] * priceX[i])
-            elif position[i - 1] == 1 and position[i] == 0:
-                shareX[i] = 0
-                cash[i] = cash[i - 1] + (shareY[i - 1] * priceY[i] + shareX[i - 1] * priceX[i])
-            elif position[i - 1] == -1 and position[i] == 0:
-                shareX[i] = 0
-                cash[i] = cash[i - 1] + (shareY[i - 1] * priceY[i] + shareX[i - 1] * priceX[i])
+            elif position[i - 1] == 1 and position[i] == -1:
+                shareX[i] = (-beta) * shareY[i] * priceY[i] / priceX[i]
+                cash[i] = cash[i - 1] + shareX[i - 1] * priceX[i] - shareX[i] * priceX[i]
+            elif position[i - 1] == -1 and position[i] == 1:
+                shareX[i] = (-beta) * shareY[i] * priceY[i] / priceX[i]
+                cash[i] = cash[i - 1] + shareX[i - 1] * priceX[i] - shareX[i] * priceX[i]
 
+        # 转换为 Pandas 数据结构并计算资产总值
         cash = pd.Series(cash, index=position.index)
         shareY = pd.Series(shareY, index=position.index)
         shareX = pd.Series(shareX, index=position.index)
@@ -186,7 +192,7 @@ class PairTrading:
         account = pd.DataFrame({'Position': position, 'ShareY': shareY, 'ShareX': shareX, 'Cash': cash, 'Asset': asset})
         return (account)
 
-#
+    #
     def compute_summary_statistics(self, account):
 
         returns = account['Asset'].pct_change().dropna()
@@ -212,7 +218,7 @@ class PairTrading:
         }
 
 
-
+    def strategy_fomulation(self,from):
 
 
 if __name__ == '__main__':
@@ -226,7 +232,7 @@ if __name__ == '__main__':
     formStart = '2017-01-01'
     formEnd = '2020-12-31'
 
-    pair=pt.findPair(sh, formStart, formEnd)[2]
+    pair=pt.findPair(sh, formStart, formEnd)[0]
 
     pa=pair[0].split("-")
     print(pa)
@@ -247,8 +253,8 @@ if __name__ == '__main__':
     sd = np.std(SSD_spread_form)
 
 #trading simulation and backtesting
-    tradStart = '2021-01-01'
-    tradEnd = '2023-12-31'
+    tradStart = '2017-01-01'
+    tradEnd = '2020-12-31'
 
     price_priceX_trade = P_priceX[tradStart:tradEnd]
     price_priceY_trade = P_priceY[tradStart:tradEnd]
@@ -261,8 +267,9 @@ if __name__ == '__main__':
     level = (float('-inf'), mu - 3.0 * sd, mu - 1.5 * sd, mu - 0.2 * sd, mu + 0.2 * sd, mu + 1.5 * sd, mu + 3.0 * sd,
              float('inf'))
     # print(level)
-    # print(SSD_spread_trade)
+    print(SSD_spread_trade)
     prcLevel = pd.cut(SSD_spread_trade, level, labels=False) - 3
+    # print(prcLevel)
     signal = pt.TradeSig(prcLevel)
 
     position = [signal[0]]
